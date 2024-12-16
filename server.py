@@ -208,6 +208,9 @@ def generate_qr_code():
 
 
 
+import psutil
+import datetime
+
 def get_cpu_usage():
     return psutil.cpu_percent(interval=1)
 
@@ -219,26 +222,49 @@ def get_disk_usage():
     disk = psutil.disk_usage('/')
     return disk.percent
 
+def get_network_usage():
+    net_io = psutil.net_io_counters()
+    return f"Sent: {net_io.bytes_sent / (1024 * 1024):.2f} MB, Received: {net_io.bytes_recv / (1024 * 1024):.2f} MB"
+
+def get_battery_status():
+    battery = psutil.sensors_battery()
+    if battery:
+        return f"Battery: {battery.percent}%, Plugged in: {'Yes' if battery.power_plugged else 'No'}"
+    else:
+        return "Battery status not available"
+
+def get_system_uptime():
+    boot_time = datetime.datetime.fromtimestamp(psutil.boot_time())
+    uptime = datetime.datetime.now() - boot_time
+    return str(uptime).split('.')[0]  # Return uptime without microseconds
+
 def update_monitor_textbox():
     cpu_usage = get_cpu_usage()
     memory_usage = get_memory_usage()
     disk_usage = get_disk_usage()
+    network_usage = get_network_usage()
+    battery_status = get_battery_status()
+    system_uptime = get_system_uptime()
 
     monitor_textbox.configure(state=tk.NORMAL)
     monitor_textbox.delete(1.0, tk.END)
     monitor_textbox.insert(tk.END, f"CPU Usage: {cpu_usage}%\n")
     monitor_textbox.insert(tk.END, f"Memory Usage: {memory_usage}%\n")
     monitor_textbox.insert(tk.END, f"Disk Usage: {disk_usage}%\n")
+    monitor_textbox.insert(tk.END, f"Network Usage: {network_usage}\n")
+    monitor_textbox.insert(tk.END, f"{battery_status}\n")
+    monitor_textbox.insert(tk.END, f"System Uptime: {system_uptime}\n")
     monitor_textbox.configure(state=tk.DISABLED)
 
     app.after(1000, update_monitor_textbox)  # Update every second
 
 
 
+
 app = ctk.CTk()
-app.title("ConnectPlus [Server framework]")
-app.geometry("800x800")
-app.resizable(True, True)
+app.title("ConnectPlus [Server Side GUI]")
+app.geometry("800x850")
+app.resizable(False, False)
 
 
 # Set the main window color using a custom frame
@@ -249,40 +275,57 @@ main_frame.pack(fill="both", expand=True, padx=20, pady=5)
 server_control_frame = ctk.CTkFrame(main_frame, fg_color="#31473A")
 server_control_frame.pack(pady=1, fill="x")
 
+socket_label = ctk.CTkLabel(server_control_frame, text="🛜 HTTP|Socket server configuration", text_color="#31473A", font=("Trebuchet MS", 14, "bold"),fg_color="#EDF4F2",corner_radius=10, anchor="w")
+socket_label.grid(row=0, column=0, columnspan=3, padx=5, pady=5)
 port_label = ctk.CTkLabel(server_control_frame, text="Port:", font=("Trebuchet MS", 12))
-port_label.grid(row=0, column=0, padx=5, pady=5)
+port_label.grid(row=1, column=1, padx=5, pady=5)
 port_entry = ctk.CTkEntry(server_control_frame, corner_radius=10, placeholder_text="Enter port number")
-port_entry.grid(row=0, column=1, padx=5, pady=5)
+port_entry.grid(row=1, column=2, padx=5, pady=5)
 
 server_switch = ctk.CTkSwitch(server_control_frame, text="Start Socket Module (Messenger)", font=("Trebuchet MS", 12), command=toggle_server)
-server_switch.grid(row=0, column=2, padx=5, pady=5)
+server_switch.grid(row=1, column=3, padx=5, pady=5)
 
 # HTTP server control section
 http_server_control_frame = ctk.CTkFrame(main_frame, fg_color="#31473A")
 http_server_control_frame.pack(pady=1, fill="x")
 
-http_port_label = ctk.CTkLabel(http_server_control_frame, text="HTTP Port:", font=("Trebuchet MS", 12))
+
+
+# Create a parent frame to hold both sections side by side
+qr_split_frame = ctk.CTkFrame(http_server_control_frame, fg_color="#31473A")
+qr_split_frame.grid(row=0, column=0, columnspan=6, padx=10, pady=10, sticky="ew")
+
+# Left section - HTTP server controls
+http_server_controls = ctk.CTkFrame(qr_split_frame, fg_color="#31473A")
+http_server_controls.grid(row=0, column=0, padx=5, pady=5, sticky="ns")
+
+http_port_label = ctk.CTkLabel(http_server_controls, text="HTTP Port:", font=("Trebuchet MS", 12))
 http_port_label.grid(row=0, column=0, padx=5, pady=5)
-http_port_entry = ctk.CTkEntry(http_server_control_frame, corner_radius=10, placeholder_text="Enter port number")
+http_port_entry = ctk.CTkEntry(http_server_controls, corner_radius=10, placeholder_text="Enter port number")
 http_port_entry.grid(row=0, column=1, padx=5, pady=5)
 
-http_server_switch = ctk.CTkSwitch(http_server_control_frame, text="Start HTTP Server", font=("Trebuchet MS", 12), command=toggle_http_server)
+http_server_switch = ctk.CTkSwitch(http_server_controls, text="Start HTTP Server", font=("Trebuchet MS", 12), command=toggle_http_server)
 http_server_switch.grid(row=0, column=3, padx=5, pady=5)
 
-shared_directory_label = ctk.CTkLabel(http_server_control_frame, text="Shared Directory:", font=("Trebuchet MS", 12))
+shared_directory_label = ctk.CTkLabel(http_server_controls, text="Shared Directory:", font=("Trebuchet MS", 12))
 shared_directory_label.grid(row=1, column=0, padx=5, pady=5)
-shared_directory_entry = ctk.CTkEntry(http_server_control_frame, corner_radius=10, placeholder_text="Select directory")
-shared_directory_entry.grid(row=1, column=1, columnspan=4, padx=5, pady=5, sticky="ew")
-browse_button = ctk.CTkButton(http_server_control_frame, text="Browse", font=("Trebuchet MS", 12), command=select_directory, corner_radius=10)
-browse_button.grid(row=1, column=5, padx=5, pady=5)
+shared_directory_entry = ctk.CTkEntry(http_server_controls, corner_radius=10, placeholder_text="Select directory")
+shared_directory_entry.grid(row=1, column=1, columnspan=2, padx=5, pady=5, sticky="ew")
+browse_button = ctk.CTkButton(http_server_controls, text="Browse", font=("Trebuchet MS", 12), command=select_directory, corner_radius=10)
+browse_button.grid(row=1, column=3, padx=5, pady=5)
+
+# Right section - QR code
+qr_code_frame = ctk.CTkFrame(qr_split_frame, fg_color="#31473A")
+qr_code_frame.grid(row=0, column=1, padx=5, pady=5, sticky="ns")
 
 # QR Code button
-qr_button = ctk.CTkButton(http_server_control_frame, text="Generate QR Code", font=("Trebuchet MS", 12), command=generate_qr_code, corner_radius=10)
-qr_button.grid(row=2, column=0, padx=5, pady=5)
+qr_button = ctk.CTkButton(qr_code_frame, text="Generate QR Code", font=("Trebuchet MS", 12), command=generate_qr_code, corner_radius=10)
+qr_button.grid(row=0, column=0, padx=5, pady=5)
 
 # QR Code display label
-qr_label = ctk.CTkLabel(http_server_control_frame, text="Qr Code:", font=("Trebuchet MS", 8))
-qr_label.grid(row=2, column=1, columnspan=1, padx=10, pady=5)
+qr_label = ctk.CTkLabel(qr_code_frame, text="QR Code will appear here", font=("Trebuchet MS", 8))
+qr_label.grid(row=1, column=0, padx=10, pady=1)
+
 
 # server information label
 server_info = ctk.CTkLabel(
@@ -291,16 +334,24 @@ server_info = ctk.CTkLabel(
     text_color="white", 
     font=("Trebuchet MS", 8),
     corner_radius=4, 
-    wraplength=300  # Set wrap length to fit within the right frame
+    wraplength=300,
+    justify="left"  # Set wrap length to fit within the right frame
 )
-server_info.grid(row=2, column=2, columnspan=5, padx=5, pady=5)
+server_info.grid(row=2, column=0, columnspan=2, padx=5, pady=5)
+
+
+
+
+# Create a parent frame to hold both sections side by side
+split_frame = ctk.CTkFrame(main_frame, fg_color="#31473A")
+split_frame.pack(pady=1, fill="both", expand=True)
 
 # User management section
-user_management_frame = ctk.CTkFrame(main_frame, fg_color="#31473A")
-user_management_frame.pack(pady=1, fill="x")
+user_management_frame = ctk.CTkFrame(split_frame, fg_color="#31473A")
+user_management_frame.grid(row=0, column=0, padx=10, pady=10, sticky="ns")
 
-user_management = ctk.CTkLabel(user_management_frame, text="User Management", text_color="#31473A", font=("Trebuchet MS", 14, "bold"),fg_color="#EDF4F2",corner_radius=10)
-user_management.grid(row=0, column=0, columnspan=1, padx=10, pady=1)
+user_management = ctk.CTkLabel(user_management_frame, text="🛗 User Management", text_color="#31473A", font=("Trebuchet MS", 14, "bold"),fg_color="#EDF4F2",corner_radius=10)
+user_management.grid(row=0, column=0, columnspan=1, padx=5, pady=1)
 
 new_user_label = ctk.CTkLabel(user_management_frame, text="New User:", font=("Trebuchet MS", 12))
 new_user_label.grid(row=1, column=0, padx=5, pady=1)
@@ -308,27 +359,42 @@ new_user_entry = ctk.CTkEntry(user_management_frame, corner_radius=10, placehold
 new_user_entry.grid(row=1, column=1, padx=5, pady=1)
 
 new_password_label = ctk.CTkLabel(user_management_frame, text="New Password:", font=("Trebuchet MS", 12))
-new_password_label.grid(row=2, column=0, padx=5, pady=5)
+new_password_label.grid(row=2, column=0, padx=5, pady=1)
 new_password_entry = ctk.CTkEntry(user_management_frame, corner_radius=10, show="*", placeholder_text="Enter password")
 new_password_entry.grid(row=2, column=1, padx=5, pady=1)
 
-add_user_button = ctk.CTkButton(user_management_frame, text="Add User", command=add_user, corner_radius=10, font=("Trebuchet MS", 12))
+add_user_button = ctk.CTkButton(user_management_frame, text="➕ Add User", command=add_user, corner_radius=10, font=("Trebuchet MS", 12))
 add_user_button.grid(row=1, column=2, padx=5, pady=1)
 
-remove_user_button = ctk.CTkButton(user_management_frame, text="Remove User", command=remove_user, corner_radius=10, font=("Trebuchet MS", 12))
+remove_user_button = ctk.CTkButton(user_management_frame, text="➖Remove User", command=remove_user, corner_radius=10, font=("Trebuchet MS", 12))
 remove_user_button.grid(row=2, column=2, padx=5, pady=1)
 
 user_list_label = ctk.CTkLabel(user_management_frame, text="Users:", font=("Trebuchet MS", 12))
 user_list_label.grid(row=3, column=0, padx=5, pady=1)
 user_textbox = ctk.CTkTextbox(user_management_frame, width=50, height=100, corner_radius=10, state=tk.DISABLED)
-user_textbox.grid(row=4, column=0, columnspan=7, padx=5, pady=1, sticky="ew")
+user_textbox.grid(row=4, column=0, columnspan=3, padx=5, pady=1, sticky="ew")
 update_user_list()
+
+# System resource monitoring section
+monitor_frame = ctk.CTkFrame(split_frame, fg_color="#31473A")
+monitor_frame.grid(row=0, column=1, padx=10, pady=10, sticky="ns")
+
+monitor_label = ctk.CTkLabel(monitor_frame, text="⚙ System Resource Monitoring", text_color="#31473A", font=("Trebuchet MS", 14, "bold"),fg_color="#EDF4F2",corner_radius=10, anchor="w")
+monitor_label.pack(pady=(1, 0), padx=10, anchor="w")
+
+monitor_textbox = ctk.CTkTextbox(monitor_frame, width=250, height=100, corner_radius=10)
+monitor_textbox.pack(padx=10, pady=5, fill="both", expand=True)
+
+# Call the function to start monitoring
+update_monitor_textbox()
+
+
 
 # Server log section
 log_frame = ctk.CTkFrame(main_frame, fg_color="#31473A")
 log_frame.pack(pady=1, fill="both", expand=True)
 
-log_label = ctk.CTkLabel(log_frame, text="Socket Server Logs", text_color="#31473A", font=("Trebuchet MS", 14, "bold"),fg_color="#EDF4F2",corner_radius=10, anchor="w")
+log_label = ctk.CTkLabel(log_frame, text="🖹 Socket Server Logs", text_color="#31473A", font=("Trebuchet MS", 14, "bold"),fg_color="#EDF4F2",corner_radius=10, anchor="w")
 log_label.pack(pady=(10, 0), padx=10, anchor="w")
 
 log_textbox = ctk.CTkTextbox(log_frame, width=200, height=100, corner_radius=10)
@@ -338,26 +404,12 @@ log_textbox.pack(padx=10, pady=5, fill="both", expand=True)
 http_log_frame = ctk.CTkFrame(main_frame, fg_color="#31473A")
 http_log_frame.pack(pady=1, fill="both", expand=True)
 
-http_log_label = ctk.CTkLabel(http_log_frame, text="HTTP Get Requests Logs", text_color="#31473A", font=("Trebuchet MS", 14, "bold"),fg_color="#EDF4F2",corner_radius=10, anchor="w")
+http_log_label = ctk.CTkLabel(http_log_frame, text="🖹 HTTP Get Requests", text_color="#31473A", font=("Trebuchet MS", 14, "bold"),fg_color="#EDF4F2",corner_radius=10, anchor="w")
 http_log_label.pack(pady=(10, 0), padx=10, anchor="w")
 
 http_log_textbox = ctk.CTkTextbox(http_log_frame, width=200, height=100, corner_radius=10)
 http_log_textbox.pack(padx=10, pady=5, fill="both", expand=True)
 
-
-
-# resource monitor section
-monitor_frame = ctk.CTkFrame(main_frame, fg_color="#31473A")
-monitor_frame.pack(pady=1, fill="both", expand=True)
-
-monitor_label = ctk.CTkLabel(monitor_frame, text="System Resource Monitoring", text_color="#31473A", font=("Trebuchet MS", 14, "bold"),fg_color="#EDF4F2",corner_radius=10, anchor="w")
-monitor_label.pack(pady=(10, 0), padx=10, anchor="w")
-
-monitor_textbox = ctk.CTkTextbox(monitor_frame, width=200, height=100, corner_radius=10)
-monitor_textbox.pack(padx=10, pady=5, fill="both", expand=True)
-
-# Call the function to start monitoring
-update_monitor_textbox()
 
 # Add copyright label with text wrapping
 copyright_label = ctk.CTkLabel(
