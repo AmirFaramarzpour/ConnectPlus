@@ -10,6 +10,8 @@ from base64 import b64encode
 import qrcode
 from PIL import Image, ImageTk
 import psutil
+import datetime
+import os 
 
 
 users = {"amir": "amir", "movie": "movie", "admin":"root","guest":"guest"}  # Example user credentials
@@ -120,6 +122,7 @@ class AuthHandler(http.server.SimpleHTTPRequestHandler):
 def start_http_server():
     global httpd
     try:
+        os.chdir(shared_directory)  # Change the working directory to the selected directory
         handler = AuthHandler
         httpd = socketserver.TCPServer(("0.0.0.0", int(http_port_entry.get())), handler)
         http_server_ip = socket.gethostbyname(socket.gethostname())
@@ -128,8 +131,6 @@ def start_http_server():
     except OSError as e:
         log_http_message(f"Error: {e}")
         stop_http_server()
-
-
 
 def stop_http_server():
     global httpd
@@ -185,7 +186,7 @@ def log_http_message(message):
     http_log_textbox.insert(ctk.END, f"{message}\n")
     http_log_textbox.see(ctk.END)
 
-
+#=============================================================================
 def generate_qr_code():
     http_server_ip = socket.gethostbyname(socket.gethostname())
     url = f"http://{http_server_ip}:{http_port_entry.get()}"
@@ -205,11 +206,7 @@ def generate_qr_code():
     qr_label.configure(image=img)
     qr_label.image = img
 
-
-
-
-import psutil
-import datetime
+#=============================================================================
 
 def get_cpu_usage():
     return psutil.cpu_percent(interval=1)
@@ -224,12 +221,12 @@ def get_disk_usage():
 
 def get_network_usage():
     net_io = psutil.net_io_counters()
-    return f"Sent: {net_io.bytes_sent / (1024 * 1024):.2f} MB, Received: {net_io.bytes_recv / (1024 * 1024):.2f} MB"
+    return f"\n 🠑 Sent: {net_io.bytes_sent / (1024 * 1024):.2f} MB, \n 🠗 Received: {net_io.bytes_recv / (1024 * 1024):.2f} MB"
 
 def get_battery_status():
     battery = psutil.sensors_battery()
     if battery:
-        return f"Battery: {battery.percent}%, Plugged in: {'Yes' if battery.power_plugged else 'No'}"
+        return f"🔋Battery: {battery.percent}%, Plugged in: {'Yes ☑' if battery.power_plugged else 'No ☒'}"
     else:
         return "Battery status not available"
 
@@ -256,16 +253,16 @@ def update_monitor_textbox():
     monitor_textbox.insert(tk.END, f"System Uptime: {system_uptime}\n")
     monitor_textbox.configure(state=tk.DISABLED)
 
-    app.after(1000, update_monitor_textbox)  # Update every second
+    app.after(10000, update_monitor_textbox)  # Update every 10 second
 
 
-
+#=============================================================================
+# Apps and Layout settings:
 
 app = ctk.CTk()
 app.title("ConnectPlus [Server Side GUI]")
-app.geometry("800x850")
-app.resizable(False, False)
-
+app.geometry("850x850")
+app.resizable(True, True)
 
 # Set the main window color using a custom frame
 main_frame = ctk.CTkFrame(app, fg_color="#7C8363")
@@ -285,11 +282,10 @@ port_entry.grid(row=1, column=2, padx=5, pady=5)
 server_switch = ctk.CTkSwitch(server_control_frame, text="Start Socket Module (Messenger)", font=("Trebuchet MS", 12), command=toggle_server)
 server_switch.grid(row=1, column=3, padx=5, pady=5)
 
+#=============================================================================
 # HTTP server control section
 http_server_control_frame = ctk.CTkFrame(main_frame, fg_color="#31473A")
 http_server_control_frame.pack(pady=1, fill="x")
-
-
 
 # Create a parent frame to hold both sections side by side
 qr_split_frame = ctk.CTkFrame(http_server_control_frame, fg_color="#31473A")
@@ -309,10 +305,10 @@ http_server_switch.grid(row=0, column=3, padx=5, pady=5)
 
 shared_directory_label = ctk.CTkLabel(http_server_controls, text="Shared Directory:", font=("Trebuchet MS", 12))
 shared_directory_label.grid(row=1, column=0, padx=5, pady=5)
-shared_directory_entry = ctk.CTkEntry(http_server_controls, corner_radius=10, placeholder_text="Select directory")
-shared_directory_entry.grid(row=1, column=1, columnspan=2, padx=5, pady=5, sticky="ew")
+shared_directory_entry = ctk.CTkEntry(http_server_controls, corner_radius=10, placeholder_text="Select directory using browse button")
+shared_directory_entry.grid(row=1, column=1, columnspan=4, padx=5, pady=5, sticky="ew")
 browse_button = ctk.CTkButton(http_server_controls, text="Browse", font=("Trebuchet MS", 12), command=select_directory, corner_radius=10)
-browse_button.grid(row=1, column=3, padx=5, pady=5)
+browse_button.grid(row=1, column=5, padx=5, pady=5)
 
 # Right section - QR code
 qr_code_frame = ctk.CTkFrame(qr_split_frame, fg_color="#31473A")
@@ -326,25 +322,12 @@ qr_button.grid(row=0, column=0, padx=5, pady=5)
 qr_label = ctk.CTkLabel(qr_code_frame, text="QR Code will appear here", font=("Trebuchet MS", 8))
 qr_label.grid(row=1, column=0, padx=10, pady=1)
 
-
-# server information label
-server_info = ctk.CTkLabel(
-    http_server_control_frame, 
-    text="This program allows you to share a directory of files on your local network, with options for basic authentication, logging GET requests, and monitoring connected devices.", 
-    text_color="white", 
-    font=("Trebuchet MS", 8),
-    corner_radius=4, 
-    wraplength=300,
-    justify="left"  # Set wrap length to fit within the right frame
-)
-server_info.grid(row=2, column=0, columnspan=2, padx=5, pady=5)
-
-
-
-
 # Create a parent frame to hold both sections side by side
 split_frame = ctk.CTkFrame(main_frame, fg_color="#31473A")
 split_frame.pack(pady=1, fill="both", expand=True)
+
+
+#=============================================================================
 
 # User management section
 user_management_frame = ctk.CTkFrame(split_frame, fg_color="#31473A")
@@ -366,7 +349,7 @@ new_password_entry.grid(row=2, column=1, padx=5, pady=1)
 add_user_button = ctk.CTkButton(user_management_frame, text="➕ Add User", command=add_user, corner_radius=10, font=("Trebuchet MS", 12))
 add_user_button.grid(row=1, column=2, padx=5, pady=1)
 
-remove_user_button = ctk.CTkButton(user_management_frame, text="➖Remove User", command=remove_user, corner_radius=10, font=("Trebuchet MS", 12))
+remove_user_button = ctk.CTkButton(user_management_frame, text="➖ Remove User", command=remove_user, corner_radius=10, font=("Trebuchet MS", 12))
 remove_user_button.grid(row=2, column=2, padx=5, pady=1)
 
 user_list_label = ctk.CTkLabel(user_management_frame, text="Users:", font=("Trebuchet MS", 12))
@@ -375,20 +358,22 @@ user_textbox = ctk.CTkTextbox(user_management_frame, width=50, height=100, corne
 user_textbox.grid(row=4, column=0, columnspan=3, padx=5, pady=1, sticky="ew")
 update_user_list()
 
+#=============================================================================
+
 # System resource monitoring section
 monitor_frame = ctk.CTkFrame(split_frame, fg_color="#31473A")
 monitor_frame.grid(row=0, column=1, padx=10, pady=10, sticky="ns")
 
-monitor_label = ctk.CTkLabel(monitor_frame, text="⚙ System Resource Monitoring", text_color="#31473A", font=("Trebuchet MS", 14, "bold"),fg_color="#EDF4F2",corner_radius=10, anchor="w")
-monitor_label.pack(pady=(1, 0), padx=10, anchor="w")
+monitor_label = ctk.CTkLabel(monitor_frame, text="⚙ Performance", text_color="#31473A", font=("Trebuchet MS", 14, "bold"),fg_color="#EDF4F2",corner_radius=10, anchor="w")
+monitor_label.pack(pady=(1, 0), padx=5, anchor="w")
 
 monitor_textbox = ctk.CTkTextbox(monitor_frame, width=250, height=100, corner_radius=10)
-monitor_textbox.pack(padx=10, pady=5, fill="both", expand=True)
+monitor_textbox.pack(padx=5, pady=1, fill="both", expand=True)
 
 # Call the function to start monitoring
 update_monitor_textbox()
 
-
+#=============================================================================
 
 # Server log section
 log_frame = ctk.CTkFrame(main_frame, fg_color="#31473A")
@@ -410,6 +395,7 @@ http_log_label.pack(pady=(10, 0), padx=10, anchor="w")
 http_log_textbox = ctk.CTkTextbox(http_log_frame, width=200, height=100, corner_radius=10)
 http_log_textbox.pack(padx=10, pady=5, fill="both", expand=True)
 
+#=============================================================================
 
 # Add copyright label with text wrapping
 copyright_label = ctk.CTkLabel(
@@ -422,4 +408,6 @@ copyright_label = ctk.CTkLabel(
 )
 copyright_label.pack(pady=(3, 3))
 
+#=============================================================================
+# Running the app
 app.mainloop()
