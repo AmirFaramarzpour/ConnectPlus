@@ -10,6 +10,10 @@ For additional advanced features, consider upgrading to [ConnectPlus-Pro](https:
 1. Integration with OpenAI GPT-4o-mini API for as an assistant.
 2. Complete UI improvement for a better user experience.
 3. Bug fixes for smoother performance.
+4. Increased the overall Quality of ConnectPlus-Pro (Client) version.
+5. Send File option is now possible within the ConnectPlus-Pro (Client) version.
+6. Sending emojis in client messenger app is now possible within the ConnectPlus-Pro (Client) version.
+7. Custom theme (default and dark mode)
 
 ## Table of Contents
 - [Installation](#installation)
